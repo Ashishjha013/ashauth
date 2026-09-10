@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AshAuth | Login</title>
+
+    <script src="/public/theme.js"></script>
+    <link rel="stylesheet" href="/public/theme.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300 font-sans">
+    <main class="relative flex min-h-screen items-center justify-center p-4 overflow-hidden">
+        <div class="absolute inset-0 bg-dot-grid [mask-image:radial-gradient(ellipse_60%_60%_at_50%_40%,black,transparent)] pointer-events-none"></div>
+
+        <button id="theme-toggle" type="button" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--stroke)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--text)] transition-colors" title="Toggle theme">
+            <i class="ti ti-sun text-lg icon-dark"></i>
+            <i class="ti ti-moon text-lg icon-light"></i>
+        </button>
+
+        <div class="relative w-full max-w-[400px] rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] p-8 shadow-[var(--shadow-md)]">
+            <div class="flex justify-center mb-6">
+                <a href="/" class="inline-flex items-center gap-2">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent)] text-lg font-bold text-[var(--accent-contrast)] glow-ring">A</span>
+                    <span class="font-semibold tracking-wide">AshAuth</span>
+                </a>
+            </div>
+
+            <div class="text-center mb-8">
+                <h1 id="form-title" class="text-2xl font-semibold tracking-tight text-[var(--text)]">Welcome back</h1>
+                <p id="helper-copy" class="mt-2 text-sm text-[var(--muted)]">Sign in to your account</p>
+            </div>
+
+            <div id="client-meta" class="mb-6 hidden rounded-lg border border-[var(--stroke)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--muted)] text-center"></div>
+
+            <form id="signin-form" class="space-y-4">
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-[var(--text)]" for="email">Email address</label>
+                    <input id="email" name="email" type="email" required class="w-full rounded-lg border border-[var(--stroke)] bg-[var(--surface-soft)] px-3.5 py-2.5 outline-none transition focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]" placeholder="jordan@usewave.dev">
+                </div>
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-[var(--text)]" for="password">Password</label>
+                    <input id="password" name="password" type="password" required class="w-full rounded-lg border border-[var(--stroke)] bg-[var(--surface-soft)] px-3.5 py-2.5 outline-none transition focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]" placeholder="••••••••">
+                </div>
+                <button id="submit-button" type="submit" class="btn btn-primary mt-2 w-full">Continue</button>
+            </form>
+
+            <div id="status" class="status-box mt-4 hidden rounded-lg p-3 text-center text-sm font-medium"></div>
+
+            <p class="mt-6 text-center text-sm text-[var(--muted)]">
+                Don't have an account? <a id="signup-link" class="font-medium text-[var(--accent)] hover:underline" href="/user/register">Sign up</a>
+            </p>
+        </div>
+    </main>
+
+    <script>
+        const tokenKey = "ashauth-access-token";
+        const userKey = "ashauth-user";
+
+        document.getElementById("theme-toggle").addEventListener("click", () => AshAuthTheme.toggle());
+
+        const params = new URLSearchParams(window.location.search);
+        const clientId = params.get("client_id");
+        const redirectUri = params.get("redirect_uri");
+        const state = params.get("state");
+        const nextUrl = params.get("next");
+        const form = document.getElementById("signin-form");
+        const statusBox = document.getElementById("status");
+        const clientMeta = document.getElementById("client-meta");
+        const signupLink = document.getElementById("signup-link");
+        const helperCopy = document.getElementById("helper-copy");
+        const formTitle = document.getElementById("form-title");
+        const submitButton = document.getElementById("submit-button");
+
+        const setStatus = (message, type) => {
+            statusBox.textContent = message;
+            statusBox.dataset.type = type === "error" ? "error" : "info";
+            statusBox.classList.remove("hidden");
+        };
+
+        const persistSession = (result) => {
+            localStorage.setItem(tokenKey, result.accessToken);
+            localStorage.setItem(userKey, JSON.stringify(result.user));
+        };
+
+        const setOwnerMode = () => {
+            signupLink.href = nextUrl ? `/user/register?next=${encodeURIComponent(nextUrl)}` : "/user/register";
+            formTitle.textContent = "Sign in";
+            helperCopy.textContent = "to continue to AshAuth";
+            submitButton.textContent = "Continue";
+        };
+
+        const setClientMode = async () => {
+            signupLink.href = `/user/register${window.location.search}`;
+            formTitle.textContent = "Sign in";
+            helperCopy.textContent = "to continue to application";
+            submitButton.textContent = "Continue";
+
+            try {
+                const response = await fetch(`/client/meta?client_id=${encodeURIComponent(clientId)}${redirectUri ? `&redirect_uri=${encodeURIComponent(redirectUri)}` : ""}`);
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Unable to load project");
+                }
+
+                const { client } = result.data;
+                helperCopy.textContent = `to continue to ${client.applicationName}`;
+            } catch (error) {
+                setStatus(error.message || "Unable to load project", "error");
+            }
+        };
+
+        if (!clientId && localStorage.getItem(tokenKey) && localStorage.getItem(userKey)) {
+            window.location.href = nextUrl || "/dashboard";
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            setStatus(clientId ? "Signing in..." : "Signing in...", "info");
+
+            const payload = {
+                email: form.email.value,
+                password: form.password.value,
+                clientId: clientId || undefined,
+                redirectUri: redirectUri || undefined,
+                state: state || undefined
+            };
+
+            try {
+                const response = await fetch(window.location.pathname, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Login failed");
+                }
+
+                if (clientId) {
+                    setStatus("Success. Redirecting...", "info");
+                    setTimeout(() => {
+                        window.location.href = result.data.redirectTo;
+                    }, 500);
+                    return;
+                }
+
+                persistSession(result.data);
+                setStatus("Success. Redirecting...", "info");
+                setTimeout(() => {
+                    window.location.href = nextUrl || "/dashboard";
+                }, 350);
+            } catch (error) {
+                setStatus(error.message || "Login failed", "error");
+            }
+        });
+
+        if (clientId) {
+            setClientMode();
+        } else {
+            setOwnerMode();
+        }
+    </script>
+</body>
+</html>

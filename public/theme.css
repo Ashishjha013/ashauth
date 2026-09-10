@@ -1,0 +1,189 @@
+:root {
+    color-scheme: light dark;
+
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --surface-soft: #f4f4f5;
+    --surface-veil: rgba(255, 255, 255, 0.45);
+    --stroke: #e4e4e7;
+    --text: #18181b;
+    --muted: #71717a;
+
+    --accent: #0070f3;
+    --accent-hover: #005ecb;
+    --accent-contrast: #ffffff;
+    --accent-soft: #eaf3ff;
+    --accent-glow: rgba(0, 112, 243, 0.12);
+    --accent-border: rgba(0, 112, 243, 0.4);
+
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --danger-border: #fecaca;
+
+    --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.04);
+    --shadow-md: 0 12px 32px -8px rgba(24, 24, 27, 0.12);
+}
+
+[data-theme="dark"] {
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-soft: #27272a;
+    --surface-veil: rgba(24, 24, 27, 0.45);
+    --stroke: #3f3f46;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+
+    --accent: #3291ff;
+    --accent-hover: #5aa9ff;
+    --accent-contrast: #ffffff;
+    --accent-soft: #10233d;
+    --accent-glow: rgba(50, 145, 255, 0.16);
+    --accent-border: rgba(50, 145, 255, 0.45);
+
+    --danger: #f87171;
+    --danger-bg: #2a0a0a;
+    --danger-border: #7f1d1d;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 20px 40px -12px rgba(0, 0, 0, 0.55);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+.status-box {
+    border-width: 1px;
+    border-style: solid;
+    background: var(--surface-soft);
+    border-color: var(--stroke);
+    color: var(--text);
+}
+
+.status-box[data-type="error"] {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+    color: var(--danger);
+}
+
+[data-theme="dark"] .icon-light { display: none; }
+[data-theme="dark"] .icon-dark { display: inline-flex; }
+:root:not([data-theme="dark"]) .icon-dark { display: none; }
+:root:not([data-theme="dark"]) .icon-light { display: inline-flex; }
+
+.text-accent {
+    color: var(--accent);
+}
+
+.bg-dot-grid {
+    background-image: radial-gradient(circle, var(--stroke) 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(0, -14px) rotate(0.5deg); }
+}
+.animate-float {
+    animation: float 7s ease-in-out infinite;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.55rem;
+    padding: 0.7rem 1.4rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn:active {
+    transform: scale(0.97) translateY(0) !important;
+}
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-border);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--stroke);
+}
+.btn-secondary:hover {
+    background: var(--surface-soft);
+    border-color: var(--accent-border);
+    transform: translateY(-2px);
+}
+
+.btn-ghost {
+    background: var(--surface-soft);
+    color: var(--text);
+    border: 1px solid var(--stroke);
+}
+.btn-ghost:hover {
+    background: var(--surface);
+    border-color: var(--accent-border);
+}
+
+.btn-danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+}
+.btn-danger:hover {
+    background: var(--danger-border);
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+}
+.btn-sm {
+    padding: 0.45rem 0.95rem;
+    font-size: 0.85rem;
+}
+
+.btn-arrow {
+    transition: transform 0.2s ease;
+}
+.btn:hover .btn-arrow {
+    transform: translateX(3px);
+}
+
+/* Subtle accent ring / elevated border, kept minimal (no blur glow) */
+.glow-ring {
+    box-shadow: 0 0 0 1px var(--accent-border);
+}
+
+.glow-border {
+    box-shadow: var(--shadow-md);
+}

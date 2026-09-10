@@ -1,0 +1,7 @@
+PORT=8080
+DATABASE_URL=postgresql://test:test@localhost:5555/auth-oidc
+MIGRATION_DATABASE_URL=postgresql://test:test@localhost:5555/auth-oidc
+ACCESS_TOKEN_SECRET=change-this-access-token-secret
+REFRESH_TOKEN_SECRET=change-this-refresh-token-secret
+ACCESS_TOKEN_EXPIRY=15m
+REFRESH_TOKEN_EXPIRY=7d
