@@ -1,193 +1,288 @@
-# AshAuth — OIDC Auth Service
+# 🔐 AshAuth
 
-A self-hosted **OAuth 2.0 / OpenID Connect (OIDC)** authentication server built with Node.js and Express. Register users, manage OAuth clients from a web dashboard, and let third-party apps delegate login through the **authorization code** flow with **RS256 JWT** access and refresh tokens.
+**A self-hosted OAuth 2.0 / OpenID Connect authorization server, built from scratch.**
 
-## What it offers
+[![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Express](https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white)](https://expressjs.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](#license)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-ashauth.onrender.com-2ea44f?logo=render&logoColor=white)](https://ashauth.onrender.com/)
 
-- **User authentication** — Email/password signup and sign-in with bcrypt-hashed passwords
-- **Developer dashboard** — Register, list, update, and delete OAuth clients (applications)
-- **OAuth 2.0 authorization code flow** — Third-party apps redirect users here; after login, users return with a short-lived `code` to exchange for tokens
-- **OIDC-style endpoints** — Discovery document, JWKS (`/certs`), token exchange, and `/userinfo`
-- **JWT tokens** — Access and refresh tokens signed with **RS256** (RSA key pair in `cert/`)
-- **Static web UI** — Landing page, dashboard, and sign-in/sign-up pages served from `public/`
+> Authentication is complicated. Understanding it shouldn't be.
 
-## Tech stack
+AshAuth implements OAuth 2.0 and OpenID Connect end to end — user signup, the authorization code flow, RS256-signed JWTs, and a protected `/userinfo` endpoint — with no libraries hiding the mechanics. It also ships a small dashboard so you can register OAuth clients and try the full flow without writing a relying-party app first.
 
-| Layer        | Technology                          |
-| ------------ | ----------------------------------- |
-| Runtime      | Node.js                             |
-| Framework    | Express 5                           |
-| Language     | TypeScript                          |
-| Database     | PostgreSQL 16                       |
-| ORM          | Drizzle ORM + Drizzle Kit           |
-| Auth         | jsonwebtoken (RS256), bcryptjs      |
-| Validation   | Zod                                 |
-| Dev tooling  | tsc-watch, Docker Compose           |
+**Live deployment:** [ashauth.onrender.com](https://ashauth.onrender.com/)
+> Hosted on Render's free tier — the first request after inactivity may take a few seconds to spin up.
 
-## Prerequisites
+---
 
-- [Node.js](https://nodejs.org/) (v18+ recommended)
-- [Docker](https://www.docker.com/) (for PostgreSQL)
-- [OpenSSL](https://www.openssl.org/) (for RSA keys; included on most systems, or use `generate-keys.bat` on Windows)
+## Table of Contents
 
-## Getting started
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture](#-architecture)
+- [Authorization Code Flow](#-authorization-code-flow)
+- [API Endpoints](#-api-endpoints)
+- [Security](#-security)
+- [Getting Started](#-getting-started)
+- [Project Structure](#-project-structure)
+- [Deployment](#-deployment)
+- [Project Status](#-project-status)
+- [Why AshAuth?](#-why-ashauth)
+- [License](#license)
 
-### 1. Clone and install
+---
+
+## ✨ Features
+
+**Identity & OAuth**
+- User signup & signin with bcrypt-hashed passwords
+- OAuth 2.0 Authorization Code flow
+- OpenID Connect discovery (`/.well-known/openid-configuration`)
+- RS256-signed JWT access & refresh tokens
+- Protected `/userinfo` endpoint
+- JWKS endpoint (`/certs`) for public key discovery
+
+**Developer dashboard**
+- Dashboard signup/login for developers, separate from end-user accounts
+- Register, update, and delete OAuth client applications
+- View registered clients per developer account
+
+**Infrastructure**
+- PostgreSQL via Drizzle ORM, with SQL migrations
+- Docker Compose for a local PostgreSQL instance
+- Server-rendered HTML pages for signup/signin/dashboard/client registration
+- Designed for Neon (PostgreSQL) + Render deployment
+
+---
+
+## 🧰 Tech Stack
+
+| Technology  | Purpose                      |
+| ----------- | ----------------------------- |
+| Node.js     | Runtime                       |
+| TypeScript  | Backend language               |
+| Express 5   | HTTP server                    |
+| PostgreSQL  | Database                       |
+| Drizzle ORM | Database access & migrations   |
+| jsonwebtoken (RS256) | Token signing & verification |
+| bcryptjs    | Password hashing               |
+| Zod         | Request validation             |
+| Docker Compose | Local PostgreSQL environment |
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    User[User] --> Client[Client Application]
+    Client -->|"1. Redirect to /user/login"| AshAuth
+    User -->|"2. Authenticates"| AshAuth
+
+    subgraph AshAuth["AshAuth — OAuth 2.0 / OIDC Server"]
+        Auth[Auth Module]
+        JWT[JWT Signing — RS256]
+        Discovery["/.well-known/openid-configuration"]
+    end
+
+    AshAuth -->|"3. Authorization code"| Client
+    Client -->|"4. POST /token"| AshAuth
+    AshAuth -->|"5. Access + refresh token"| Client
+    Client -->|"6. GET /userinfo"| AshAuth
+    AshAuth --> Postgres[(PostgreSQL)]
+    AshAuth --> Keys[(RSA key pair)]
+```
+
+---
+
+## 🔄 Authorization Code Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Client App
+    participant A as AshAuth
+    participant DB as PostgreSQL
+
+    C->>A: GET /user/login (client_id, redirect_uri)
+    A->>U: Show sign-in page
+    U->>A: Submit credentials
+    A->>DB: Verify user
+    A->>DB: Store authorization code
+    A-->>C: Redirect with authorization code
+    C->>A: POST /token (code, client credentials)
+    A->>DB: Validate & consume code
+    A-->>C: Access token + refresh token (RS256 JWT)
+    C->>A: GET /userinfo (Bearer access token)
+    A-->>C: User profile
+```
+
+No magic — every step above is implemented in `src/app/module/auth`.
+
+---
+
+## 🔌 API Endpoints
+
+| Method | Endpoint                              | Auth      | Purpose                                  |
+| ------ | -------------------------------------- | --------- | ----------------------------------------- |
+| GET    | `/.well-known/openid-configuration`    | —         | OIDC discovery document                   |
+| GET    | `/certs`                               | —         | JWKS / public signing keys                |
+| GET    | `/user/register`                       | —         | Render signup page                        |
+| POST   | `/user/register`                       | —         | Create a user account                     |
+| GET    | `/user/login`                          | —         | Render login page                         |
+| POST   | `/user/login`                          | —         | Authenticate user, issue authorization code |
+| POST   | `/token`                               | —         | Exchange authorization code for tokens    |
+| GET    | `/userinfo`                            | Bearer    | Return the authenticated user's profile   |
+| GET    | `/dashboard`                           | —         | Developer dashboard page                  |
+| POST   | `/dashboard/signup`                    | —         | Create a developer account                |
+| POST   | `/dashboard/login`                     | —         | Authenticate a developer                  |
+| GET    | `/client/register`                     | —         | Render OAuth client registration page     |
+| POST   | `/client/register`                     | Bearer    | Register a new OAuth client               |
+| GET    | `/clients`                             | Bearer    | List OAuth clients for the current developer |
+| GET    | `/client/meta`                         | —         | Fetch public client metadata              |
+| PUT    | `/client/:clientId`                    | Bearer    | Update an OAuth client                    |
+| DELETE | `/client/:clientId`                    | Bearer    | Delete an OAuth client                    |
+
+---
+
+## 🔒 Security
+
+- Passwords hashed with **bcrypt**
+- Tokens signed with **RS256** using an asymmetric RSA key pair (`cert/`)
+- Short-lived access tokens + longer-lived refresh tokens (configurable expiry)
+- Authorization codes are single-use and validated server-side before token exchange
+- Secrets and database credentials are supplied via environment variables
+
+> 🔐 Private keys and `.env` files should never be committed to Git.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone
 
 ```bash
-git clone https://github.com/ashishjha013/Auth-Service-OIDC-OAUTH.git
-cd "Auth-Service-OIDC-OAUTH"
+git clone https://github.com/Ashishjha013/ashauth.git
+cd ashauth
+```
+
+### 2. Install dependencies
+
+```bash
 npm install
 ```
 
-### 2. Start PostgreSQL
+### 3. Configure environment variables
+
+Copy `env_sample.txt` to `.env` and fill in real values:
+
+```bash
+cp env_sample.txt .env
+```
+
+```env
+PORT=8080
+DATABASE_URL=your_database_url
+MIGRATION_DATABASE_URL=your_migration_database_url
+
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_token_secret
+
+ACCESS_TOKEN_EXPIRY=15m
+REFRESH_TOKEN_EXPIRY=7d
+```
+
+### 4. Start a local PostgreSQL instance (optional)
 
 ```bash
 docker compose up -d
 ```
 
-This starts Postgres on port **5555** with database `auth-oidc` (user/password: `test` / `test`).
-
-### 3. Generate RSA keys
+### 5. Generate RSA signing keys
 
 ```bash
 ./generate-keys.sh
 ```
 
-On Windows, run this via Git Bash or WSL.
+This creates `cert/private.pem` and `cert/public.pem`, used to sign and verify JWTs.
 
-### 4. Configure environment
-
-Copy `env_sample.txt` to `.env` and adjust if needed:
-
-```env
-PORT=8000
-DATABASE_URL=postgresql://test:test@localhost:5555/auth-oidc
-MIGRATION_DATABASE_URL=postgresql://test:test@localhost:5555/auth-oidc
-ACCESS_TOKEN_EXPIRY=15m
-REFRESH_TOKEN_EXPIRY=7d
-```
-
-### 5. Run database migrations
+### 6. Run database migrations
 
 ```bash
 npm run db:migrate
 ```
 
-### 6. Build and run
-
-**Development (watch + auto-restart):**
+### 7. Start the development server
 
 ```bash
 npm run dev
 ```
 
-**Production:**
+AshAuth will be available at **http://localhost:8080**.
 
-```bash
-npm run build
-npm start
-```
+---
 
-Open **http://localhost:8000** for the landing page and **http://localhost:8000/dashboard** for the developer dashboard.
+## 📁 Project Structure
 
-## How to use
-
-### Developer flow (register an OAuth client)
-
-1. Open `/dashboard` and create an account (signup) or sign in.
-2. Use the dashboard to register a new OAuth client with:
-   - Application name, contact email, application URL, redirect URL
-3. Save the returned **`clientId`** and **`clientSecret`** — you need them for the token exchange.
-
-Protected client APIs require the dashboard access token:
-
-```http
-Authorization: Bearer <access_token>
-```
-
-| Method | Endpoint | Description |
-| ------ | -------- | ------------- |
-| `GET`  | `/clients` | List your OAuth clients |
-| `POST` | `/client/register` | Register a new client |
-| `PUT`  | `/client/:clientId` | Update a client |
-| `DELETE` | `/client/:clientId` | Delete a client |
-
-### Third-party app flow (authorization code)
-
-1. **Redirect the user to login** with your client id and redirect URI:
-
-   ```
-   GET /user/login?client_id=<CLIENT_ID>&redirect_uri=<REDIRECT_URI>&state=<OPTIONAL_STATE>
-   ```
-
-   Or signup:
-
-   ```
-   GET /user/register?client_id=<CLIENT_ID>&redirect_uri=<REDIRECT_URI>&state=<OPTIONAL_STATE>
-   ```
-
-2. **User signs in** — The API returns a redirect URL containing a one-time `code` (valid for 5 minutes).
-
-3. **Exchange the code for tokens:**
-
-   ```http
-   POST /token
-   Content-Type: application/json
-
-   {
-     "code": "<authorization_code>",
-     "client_id": "<CLIENT_ID>",
-     "client_secret": "<CLIENT_SECRET>",
-     "redirect_uri": "<REDIRECT_URI>"
-   }
-   ```
-
-   Response includes `accessToken`, `refreshToken`, `tokenType`, and `user`.
-
-4. **Call protected APIs** with the access token:
-
-   ```http
-   GET /userinfo
-   Authorization: Bearer <access_token>
-   ```
-
-### OIDC discovery
-
-| Endpoint | Description |
-| -------- | ----------- |
-| `GET /.well-known/openid-configuration` | Issuer, endpoints, supported grants |
-| `GET /certs` | JWKS public key for verifying RS256 tokens |
-| `GET /userinfo` | Authenticated user profile |
-| `POST /token` | Authorization code → tokens |
-
-## NPM scripts
-
-| Script | Description |
-| ------ | ----------- |
-| `npm run dev` | Compile TypeScript on change and run the server |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run compiled server |
-| `npm run db:generate` | Generate Drizzle migrations from schema |
-| `npm run db:migrate` | Apply migrations |
-| `npm run studio` | Open Drizzle Studio |
-
-## Project structure
-
-```
-├── cert/                 # RSA private.pem & public.pem (not in git)
-├── drizzle/              # SQL migrations
-├── public/               # Static HTML (landing, dashboard, auth pages)
+```text
+ashauth/
+├── cert/                        # RSA key pair (not committed)
+├── drizzle/                     # Generated SQL migrations
+├── public/                      # Server-rendered pages (landing, signin, signup, dashboard)
 ├── src/
-│   ├── index.ts          # HTTP server entry
 │   ├── app/
-│   │   ├── app.ts        # Express app setup
-│   │   └── module/auth/  # Routes, controllers, services, middleware
-│   └── db/               # Drizzle schema & DB config
-├── docker-compose.yml    # PostgreSQL
-└── generate-keys.bat     # Windows helper for RSA keys
+│   │   ├── app.ts               # Express app & middleware setup
+│   │   ├── common/utils/        # Shared utilities (JWT, API responses/errors)
+│   │   └── module/auth/         # Auth domain: routes, controllers, services, middleware
+│   ├── db/
+│   │   ├── config.ts            # Database connection
+│   │   └── schema.ts            # Drizzle schema (users, oauth_clients, authorization_codes)
+│   └── index.ts                 # Server entry point
+├── docker-compose.yml           # Local PostgreSQL
+├── drizzle.config.js
+├── generate-keys.sh             # RSA key pair generation
+├── env_sample.txt
+└── package.json
 ```
+
+---
+
+## 🌐 Deployment
+
+AshAuth runs in production at **[ashauth.onrender.com](https://ashauth.onrender.com/)**, deployed on:
+
+- **[Render](https://render.com)** — application hosting
+- **[Neon](https://neon.tech)** — serverless PostgreSQL
+
+The same authorization code flow, JWT signing, and migrations run identically in production and locally — only the environment variables change.
+
+---
+
+## 📌 Project Status
+
+Core OAuth 2.0 / OIDC flow — signup, login, authorization code, token exchange, `/userinfo` — is **working end to end**, along with a developer dashboard for managing OAuth clients.
+
+Actively evolving: standards compliance, additional test coverage, and developer-experience improvements.
+
+---
+
+## 🤝 Why AshAuth?
+
+Because the best way to understand authentication is to build it.
+
+Instead of pulling in an auth library, this project implements the pieces underneath it:
+
+```
+Passwords → Users → Authorization → Codes → Tokens → UserInfo
+```
+
+Passwords go in. Trustworthy tokens come out.
+
+---
 
 ## License
 
-ISC
+ISC — see [`package.json`](./package.json).
