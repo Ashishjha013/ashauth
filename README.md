@@ -16,6 +16,8 @@ AshAuth implements OAuth 2.0 and OpenID Connect end to end — user signup, the 
 **Live deployment:** [ashauth.onrender.com](https://ashauth.onrender.com/)
 > Hosted on Render's free tier — the first request after inactivity may take a few seconds to spin up.
 
+![AshAuth OAuth 2.0 / OIDC flow overview](./ashauth-flow.png)
+
 ---
 
 ## Table of Contents
