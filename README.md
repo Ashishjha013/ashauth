@@ -13,7 +13,10 @@
 
 AshAuth implements OAuth 2.0 and OpenID Connect end to end — user signup, the authorization code flow, RS256-signed JWTs, and a protected `/userinfo` endpoint — with no libraries hiding the mechanics. It also ships a small dashboard so you can register OAuth clients and try the full flow without writing a relying-party app first.
 
+![AshAuth OAuth 2.0 / OIDC cover poster](./ashauth-cover.png)
+
 **Live deployment:** [ashauth.onrender.com](https://ashauth.onrender.com/)
+
 > Hosted on Render's free tier — the first request after inactivity may take a few seconds to spin up.
 
 ![AshAuth OAuth 2.0 / OIDC flow overview](./ashauth-flow.png)
@@ -40,6 +43,7 @@ AshAuth implements OAuth 2.0 and OpenID Connect end to end — user signup, the 
 ## ✨ Features
 
 **Identity & OAuth**
+
 - User signup & signin with bcrypt-hashed passwords
 - OAuth 2.0 Authorization Code flow
 - OpenID Connect discovery (`/.well-known/openid-configuration`)
@@ -48,11 +52,13 @@ AshAuth implements OAuth 2.0 and OpenID Connect end to end — user signup, the 
 - JWKS endpoint (`/certs`) for public key discovery
 
 **Developer dashboard**
+
 - Dashboard signup/login for developers, separate from end-user accounts
 - Register, update, and delete OAuth client applications
 - View registered clients per developer account
 
 **Infrastructure**
+
 - PostgreSQL via Drizzle ORM, with SQL migrations
 - Docker Compose for a local PostgreSQL instance
 - Server-rendered HTML pages for signup/signin/dashboard/client registration
@@ -62,17 +68,17 @@ AshAuth implements OAuth 2.0 and OpenID Connect end to end — user signup, the 
 
 ## 🧰 Tech Stack
 
-| Technology  | Purpose                      |
-| ----------- | ----------------------------- |
-| Node.js     | Runtime                       |
-| TypeScript  | Backend language               |
-| Express 5   | HTTP server                    |
-| PostgreSQL  | Database                       |
-| Drizzle ORM | Database access & migrations   |
+| Technology           | Purpose                      |
+| -------------------- | ---------------------------- |
+| Node.js              | Runtime                      |
+| TypeScript           | Backend language             |
+| Express 5            | HTTP server                  |
+| PostgreSQL           | Database                     |
+| Drizzle ORM          | Database access & migrations |
 | jsonwebtoken (RS256) | Token signing & verification |
-| bcryptjs    | Password hashing               |
-| Zod         | Request validation             |
-| Docker Compose | Local PostgreSQL environment |
+| bcryptjs             | Password hashing             |
+| Zod                  | Request validation           |
+| Docker Compose       | Local PostgreSQL environment |
 
 ---
 
@@ -128,25 +134,25 @@ No magic — every step above is implemented in `src/app/module/auth`.
 
 ## 🔌 API Endpoints
 
-| Method | Endpoint                              | Auth      | Purpose                                  |
-| ------ | -------------------------------------- | --------- | ----------------------------------------- |
-| GET    | `/.well-known/openid-configuration`    | —         | OIDC discovery document                   |
-| GET    | `/certs`                               | —         | JWKS / public signing keys                |
-| GET    | `/user/register`                       | —         | Render signup page                        |
-| POST   | `/user/register`                       | —         | Create a user account                     |
-| GET    | `/user/login`                          | —         | Render login page                         |
-| POST   | `/user/login`                          | —         | Authenticate user, issue authorization code |
-| POST   | `/token`                               | —         | Exchange authorization code for tokens    |
-| GET    | `/userinfo`                            | Bearer    | Return the authenticated user's profile   |
-| GET    | `/dashboard`                           | —         | Developer dashboard page                  |
-| POST   | `/dashboard/signup`                    | —         | Create a developer account                |
-| POST   | `/dashboard/login`                     | —         | Authenticate a developer                  |
-| GET    | `/client/register`                     | —         | Render OAuth client registration page     |
-| POST   | `/client/register`                     | Bearer    | Register a new OAuth client               |
-| GET    | `/clients`                             | Bearer    | List OAuth clients for the current developer |
-| GET    | `/client/meta`                         | —         | Fetch public client metadata              |
-| PUT    | `/client/:clientId`                    | Bearer    | Update an OAuth client                    |
-| DELETE | `/client/:clientId`                    | Bearer    | Delete an OAuth client                    |
+| Method | Endpoint                            | Auth   | Purpose                                      |
+| ------ | ----------------------------------- | ------ | -------------------------------------------- |
+| GET    | `/.well-known/openid-configuration` | —      | OIDC discovery document                      |
+| GET    | `/certs`                            | —      | JWKS / public signing keys                   |
+| GET    | `/user/register`                    | —      | Render signup page                           |
+| POST   | `/user/register`                    | —      | Create a user account                        |
+| GET    | `/user/login`                       | —      | Render login page                            |
+| POST   | `/user/login`                       | —      | Authenticate user, issue authorization code  |
+| POST   | `/token`                            | —      | Exchange authorization code for tokens       |
+| GET    | `/userinfo`                         | Bearer | Return the authenticated user's profile      |
+| GET    | `/dashboard`                        | —      | Developer dashboard page                     |
+| POST   | `/dashboard/signup`                 | —      | Create a developer account                   |
+| POST   | `/dashboard/login`                  | —      | Authenticate a developer                     |
+| GET    | `/client/register`                  | —      | Render OAuth client registration page        |
+| POST   | `/client/register`                  | Bearer | Register a new OAuth client                  |
+| GET    | `/clients`                          | Bearer | List OAuth clients for the current developer |
+| GET    | `/client/meta`                      | —      | Fetch public client metadata                 |
+| PUT    | `/client/:clientId`                 | Bearer | Update an OAuth client                       |
+| DELETE | `/client/:clientId`                 | Bearer | Delete an OAuth client                       |
 
 ---
 
